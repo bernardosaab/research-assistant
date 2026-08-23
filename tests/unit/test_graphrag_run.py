@@ -1,7 +1,8 @@
 from research_assistant.llm.base import LLMResponse, LLMUsage
 from research_assistant.models import ResearchPlan, SearchResult, SubQuestion, Triple
 from research_assistant.tracing.recorder import RunRecorder
-from research_assistant.variants.graphrag.run import build_graph
+from research_assistant.variants.graphrag.run import build_graph, format_facts_for_prompt, write_brief
+from research_assistant.writing.citations import build_source_list
 
 
 class ScriptedLLMClient:
@@ -86,3 +87,49 @@ def test_build_graph_no_sub_questions_still_clears_and_returns_empty():
     assert graph_store.cleared is True
     assert facts == []
     assert graph_store.added == []
+
+
+def test_format_facts_for_prompt_maps_source_url_to_citation_id():
+    sources = build_source_list([_search_result("https://a.com", "A", "c")])
+    facts = [Triple(subject="X", relation="r", object="Y", source_url="https://a.com")]
+
+    assert format_facts_for_prompt(facts, sources) == "X -r-> Y [1]"
+
+
+def test_format_facts_for_prompt_no_facts_returns_placeholder():
+    assert format_facts_for_prompt([], []) == "No facts extracted."
+
+
+def test_format_facts_for_prompt_unknown_source_url_omits_citation_marker():
+    facts = [Triple(subject="X", relation="r", object="Y", source_url="https://unknown.com")]
+
+    assert format_facts_for_prompt(facts, []) == "X -r-> Y"
+
+
+def test_write_brief_produces_cited_markdown_with_sources_section():
+    llm = ScriptedLLMClient(
+        [LLMResponse(text="Napoleon was born in Corsica [1].", tool_calls=[], stop_reason="end_turn", usage=_usage())]
+    )
+    results = [_search_result("https://a.com", "A", "c")]
+    facts = [Triple(subject="Napoleon", relation="born_in", object="Corsica", source_url="https://a.com")]
+    recorder = RunRecorder(variant="graphrag", topic="t")
+
+    brief = write_brief("Napoleon", facts, results, llm, recorder)
+
+    assert "Napoleon was born in Corsica [1]." in brief.markdown
+    assert "## Sources" in brief.markdown
+    assert brief.sources[0].url == "https://a.com"
+    assert len(llm.calls) == 1
+    assert llm.calls[0]["max_tokens"] == 2048
+
+
+def test_write_brief_no_facts_still_produces_brief():
+    llm = ScriptedLLMClient(
+        [LLMResponse(text="No clear facts were found.", tool_calls=[], stop_reason="end_turn", usage=_usage())]
+    )
+    recorder = RunRecorder(variant="graphrag", topic="t")
+
+    brief = write_brief("t", [], [], llm, recorder)
+
+    assert brief.markdown.strip() != ""
+    assert recorder.finalize().llm_calls == 1
