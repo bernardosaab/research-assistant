@@ -6,7 +6,10 @@ from research_assistant.tools.search_tool import TavilySearchTool
 from research_assistant.tracing.recorder import RunRecorder
 from research_assistant.variants.pipeline.run import BRIEF_SYSTEM_PROMPT
 from research_assistant.writing.brief import assemble_brief
-from research_assistant.writing.citations import build_source_list, format_sources_for_prompt
+from research_assistant.writing.citations import (
+    build_source_list,
+    format_sources_for_prompt,
+)
 
 MAX_ROUNDS = 8
 

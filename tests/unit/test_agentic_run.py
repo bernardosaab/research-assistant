@@ -1,7 +1,11 @@
 from research_assistant.llm.base import LLMResponse, LLMUsage, ToolCall
 from research_assistant.models import SearchResult
 from research_assistant.tracing.recorder import RunRecorder
-from research_assistant.variants.agentic.run import MAX_ROUNDS, run_research_loop, write_brief
+from research_assistant.variants.agentic.run import (
+    MAX_ROUNDS,
+    run_research_loop,
+    write_brief,
+)
 
 
 class ScriptedLLMClient:
