@@ -1,15 +1,17 @@
 # research-assistant
 
 A research assistant that plans, searches, reads, and writes a short brief —
-built multiple ways to compare agentic architectures (pipeline vs. agentic
-tool-loop) against the same task, using `RunRecorder` traces (LLM calls,
-tokens, duration, search calls) to compare them.
+built multiple ways to compare agentic architectures against the same task,
+using `RunRecorder` traces (LLM calls, tokens, duration, search calls) to
+compare them.
 
 ## Setup
 
 ```
 uv sync --extra dev        # base deps + pytest/pytest-mock/ruff
 uv sync --extra notebook   # only needed for tokenizer_analysis.ipynb
+uv sync --extra graphrag   # only needed once the graphrag variant is built
+uv sync --extra api        # only needed once the web backend is built
 cp .env.example .env       # fill in ANTHROPIC_API_KEY / TAVILY_API_KEY
 ```
 
@@ -37,11 +39,20 @@ Live tests that hit real APIs are marked `live` and excluded by default
   - `variants/pipeline/run.py` — **implemented.** Fixed 4-step pipeline:
     `generate_plan` → `run_searches` → `extract_findings` → `write_brief`,
     each a separate non-tool-use LLM call.
-  - `variants/agentic/run.py` — **speced, not yet implemented.** ReAct-style
-    single-agent tool loop (LLM drives its own `web_search` calls up to an
-    8-round cap, then a separate write pass), hand-rolled on the existing
+  - `variants/agentic/run.py` — **implemented.** ReAct-style single-agent
+    tool loop (LLM drives its own `web_search` calls up to an 8-round cap,
+    then a separate write pass), hand-rolled on the existing
     `LLMClient`/`ToolDef`/`ToolCall` plumbing. Design:
     `docs/superpowers/specs/2026-08-23-agentic-tool-loop-variant-design.md`.
+  - **GraphRAG retrieval variant — speced, not yet implemented.** A
+    different axis than the others: retrieval *strategy* rather than
+    orchestration control-flow. Search results get extracted into a
+    knowledge graph (entities + relationships) in a local Neo4j instance
+    (wiped and rebuilt every run — no cross-run persistence, so
+    `RunRecorder` traces stay comparable to the other variants), queried
+    back as a flat fact list for the write phase. Simplified GraphRAG (no
+    community detection/summarization — see spec for why). Design:
+    `docs/superpowers/specs/2026-08-23-graphrag-variant-design.md`.
   - **plan-execute-reflect variant — not started.** Per the original
     4-variant plan: explicit planner produces a structured plan, an executor
     works through steps, a reflection step checks sufficiency and can loop
@@ -55,25 +66,27 @@ Live tests that hit real APIs are marked `live` and excluded by default
     parallel researcher subagents, then a writer agent synthesizes findings.
     Decided 2026-08-23: also implement on **Google ADK**, same rationale as
     above.
-  - **GraphRAG retrieval variant — not started, newly added 2026-08-23.**
-    Not part of the original 4-variant plan. A variant exploring a different
-    *retrieval* strategy rather than orchestration control-flow: build a
-    knowledge graph from retrieved documents and retrieve via graph
-    traversal/community summaries (the GraphRAG technique) instead of
-    Tavily web search per sub-question/tool-call. Orthogonal axis of
-    comparison to the other variants (retrieval strategy vs. control flow).
 - `cli.py` — Typer CLI: `research-assistant run <topic> --variant <name>
-  --output <path>`.
+  --output <path>`. Will gain a `serve` command once the web backend is
+  built (see below).
+- `web/` (repo root, not yet created) — **speced, not yet implemented.** A
+  FastAPI backend (`src/research_assistant/web/`) wrapping
+  `VARIANT_REGISTRY` behind a submit-and-poll HTTP API, plus a React/Vite
+  frontend to run topics and compare `RunRecorder` traces from a browser —
+  currently the only interface is the CLI, and nothing surfaces trace data
+  anywhere. In-memory only, no persistence beyond the process, binds to
+  `127.0.0.1` only. Design: `docs/superpowers/specs/2026-08-23-web-app-design.md`.
 
 ## Status
 
-Working pipeline variant with unit test coverage (citations, models, search
-parsing) and a `live` integration test. `tokenizer_analysis.ipynb` is a
-separate, finished, self-contained notebook (domain-specific tokenizer
-fragmentation) unrelated to the CLI app.
+Pipeline and agentic variants are implemented with unit test coverage and
+`live` integration tests. GraphRAG and the web backend/frontend are speced
+but not built. `tokenizer_analysis.ipynb` is a separate, finished,
+self-contained notebook (domain-specific tokenizer fragmentation) unrelated
+to the CLI app.
 
-Roadmap (in rough order): implement the agentic tool-loop variant (spec
-approved, plan next) → plan-execute-reflect on Google ADK → multi-agent
-orchestration on Google ADK → GraphRAG retrieval variant. Each gets its own
-brainstorming → spec → plan cycle when picked up; none of the later items
-are designed yet beyond this roadmap note.
+Roadmap (in rough order): GraphRAG variant (spec approved, plan next) →
+web backend + frontend (spec approved) → plan-execute-reflect on Google ADK
+→ multi-agent orchestration on Google ADK. Each gets its own
+brainstorming → spec → plan cycle when picked up; the last two are not
+designed yet beyond this roadmap note.
