@@ -26,5 +26,13 @@ def run(
         typer.echo(brief.markdown)
 
 
+@app.command()
+def serve(port: int = 8000) -> None:
+    """Run the web backend locally (binds to 127.0.0.1 only)."""
+    import uvicorn
+
+    uvicorn.run("research_assistant.web.app:app", host="127.0.0.1", port=port)
+
+
 if __name__ == "__main__":
     app()
