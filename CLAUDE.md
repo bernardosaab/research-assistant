@@ -37,11 +37,31 @@ Live tests that hit real APIs are marked `live` and excluded by default
   - `variants/pipeline/run.py` — **implemented.** Fixed 4-step pipeline:
     `generate_plan` → `run_searches` → `extract_findings` → `write_brief`,
     each a separate non-tool-use LLM call.
-  - **Agentic tool-loop variant — not yet implemented.** Only
-    `Variant.pipeline` exists in the registry today. The plan is a variant
-    where the LLM drives its own loop via tool calls (search, maybe
-    read/extract) rather than a fixed sequence of prompts, reusing the same
-    `LLMClient`/`ToolDef`/`ToolCall` plumbing that already exists for this.
+  - `variants/agentic/run.py` — **speced, not yet implemented.** ReAct-style
+    single-agent tool loop (LLM drives its own `web_search` calls up to an
+    8-round cap, then a separate write pass), hand-rolled on the existing
+    `LLMClient`/`ToolDef`/`ToolCall` plumbing. Design:
+    `docs/superpowers/specs/2026-08-23-agentic-tool-loop-variant-design.md`.
+  - **plan-execute-reflect variant — not started.** Per the original
+    4-variant plan: explicit planner produces a structured plan, an executor
+    works through steps, a reflection step checks sufficiency and can loop
+    before the final write. Decided 2026-08-23: implement this on
+    **Google ADK** (Agent Development Kit) rather than hand-rolled, to
+    compare framework-provided vs. hand-rolled orchestration for the same
+    control flow. ADK specifics (API shape, current version) need
+    verification against its docs when this is picked up.
+  - **multi-agent orchestration variant — not started.** Per the original
+    4-variant plan: a lead/orchestrator agent delegates sub-questions to
+    parallel researcher subagents, then a writer agent synthesizes findings.
+    Decided 2026-08-23: also implement on **Google ADK**, same rationale as
+    above.
+  - **GraphRAG retrieval variant — not started, newly added 2026-08-23.**
+    Not part of the original 4-variant plan. A variant exploring a different
+    *retrieval* strategy rather than orchestration control-flow: build a
+    knowledge graph from retrieved documents and retrieve via graph
+    traversal/community summaries (the GraphRAG technique) instead of
+    Tavily web search per sub-question/tool-call. Orthogonal axis of
+    comparison to the other variants (retrieval strategy vs. control flow).
 - `cli.py` — Typer CLI: `research-assistant run <topic> --variant <name>
   --output <path>`.
 
@@ -52,5 +72,8 @@ parsing) and a `live` integration test. `tokenizer_analysis.ipynb` is a
 separate, finished, self-contained notebook (domain-specific tokenizer
 fragmentation) unrelated to the CLI app.
 
-Next planned work: design and implement the agentic tool-loop variant so it
-can be compared against the pipeline variant via `RunRecorder` traces.
+Roadmap (in rough order): implement the agentic tool-loop variant (spec
+approved, plan next) → plan-execute-reflect on Google ADK → multi-agent
+orchestration on Google ADK → GraphRAG retrieval variant. Each gets its own
+brainstorming → spec → plan cycle when picked up; none of the later items
+are designed yet beyond this roadmap note.
