@@ -1,7 +1,11 @@
 from research_assistant.llm.base import LLMResponse, LLMUsage
 from research_assistant.models import ResearchPlan, SearchResult, SubQuestion, Triple
 from research_assistant.tracing.recorder import RunRecorder
-from research_assistant.variants.graphrag.run import build_graph, format_facts_for_prompt, write_brief
+from research_assistant.variants.graphrag.run import (
+    build_graph,
+    format_facts_for_prompt,
+    write_brief,
+)
 from research_assistant.writing.citations import build_source_list
 
 

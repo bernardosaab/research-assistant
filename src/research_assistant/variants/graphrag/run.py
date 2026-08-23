@@ -8,7 +8,10 @@ from research_assistant.variants.graphrag.extraction import extract_triples
 from research_assistant.variants.graphrag.graph_store import Neo4jGraphStore
 from research_assistant.variants.pipeline.run import generate_plan, run_searches
 from research_assistant.writing.brief import assemble_brief
-from research_assistant.writing.citations import build_source_list, format_sources_for_prompt
+from research_assistant.writing.citations import (
+    build_source_list,
+    format_sources_for_prompt,
+)
 
 
 def build_graph(
