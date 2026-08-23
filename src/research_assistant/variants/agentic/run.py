@@ -1,7 +1,12 @@
+from research_assistant.config import get_settings
+from research_assistant.llm.anthropic_client import AnthropicLLMClient
 from research_assistant.llm.base import LLMClient, LLMMessage, ToolResult
-from research_assistant.models import SearchResult
+from research_assistant.models import Brief, SearchResult
 from research_assistant.tools.search_tool import TavilySearchTool
 from research_assistant.tracing.recorder import RunRecorder
+from research_assistant.variants.pipeline.run import BRIEF_SYSTEM_PROMPT
+from research_assistant.writing.brief import assemble_brief
+from research_assistant.writing.citations import build_source_list, format_sources_for_prompt
 
 MAX_ROUNDS = 8
 
@@ -43,3 +48,27 @@ def run_research_loop(
         history.append(LLMMessage(role="user", tool_results=tool_results))
 
     return all_results
+
+
+def write_brief(
+    topic: str, results: list[SearchResult], llm: LLMClient, recorder: RunRecorder
+) -> Brief:
+    sources = build_source_list(results)
+    sources_text = format_sources_for_prompt(sources)
+    response = llm.complete(
+        system=BRIEF_SYSTEM_PROMPT,
+        messages=[LLMMessage(role="user", text=f"Topic: {topic}\n\nSources:\n{sources_text}")],
+        max_tokens=2048,
+    )
+    recorder.record_llm_call(response.usage)
+    return assemble_brief(topic, response.text or "", sources)
+
+
+def run(topic: str, recorder: RunRecorder | None = None) -> Brief:
+    settings = get_settings()
+    llm = AnthropicLLMClient(api_key=settings.anthropic_api_key, model=settings.anthropic_model)
+    search_tool = TavilySearchTool(api_key=settings.tavily_api_key)
+    recorder = recorder or RunRecorder(variant="agentic", topic=topic)
+
+    results = run_research_loop(topic, llm, search_tool, recorder)
+    return write_brief(topic, results, llm, recorder)

@@ -1,7 +1,7 @@
 from research_assistant.llm.base import LLMResponse, LLMUsage, ToolCall
 from research_assistant.models import SearchResult
 from research_assistant.tracing.recorder import RunRecorder
-from research_assistant.variants.agentic.run import MAX_ROUNDS, run_research_loop
+from research_assistant.variants.agentic.run import MAX_ROUNDS, run_research_loop, write_brief
 
 
 class ScriptedLLMClient:
@@ -145,3 +145,36 @@ def test_run_research_loop_records_llm_and_tool_calls_on_recorder():
     assert trace.search_calls == 1
     assert trace.input_tokens == 20
     assert trace.output_tokens == 10
+
+
+def test_write_brief_produces_cited_markdown_with_sources_section():
+    llm = ScriptedLLMClient(
+        [
+            LLMResponse(
+                text="Paris is the capital of France [1].",
+                tool_calls=[],
+                stop_reason="end_turn",
+                usage=_usage(),
+            )
+        ]
+    )
+    results = [_search_result("https://a.com", "A")]
+    recorder = RunRecorder(variant="agentic", topic="t")
+
+    brief = write_brief("France", results, llm, recorder)
+
+    assert "Paris is the capital of France [1]." in brief.markdown
+    assert "## Sources" in brief.markdown
+    assert "[A](https://a.com)" in brief.markdown
+    assert brief.sources[0].url == "https://a.com"
+    assert len(llm.calls) == 1
+    assert llm.calls[0]["max_tokens"] == 2048
+
+
+def test_write_brief_records_llm_call_on_recorder():
+    llm = ScriptedLLMClient([_end_turn_response("brief text")])
+    recorder = RunRecorder(variant="agentic", topic="t")
+
+    write_brief("t", [], llm, recorder)
+
+    assert recorder.finalize().llm_calls == 1
