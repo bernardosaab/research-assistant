@@ -107,7 +107,8 @@ def extract_findings(
 
 
 def write_brief(plan: ResearchPlan, llm: LLMClient, recorder: RunRecorder) -> Brief:
-    sources = build_source_list(plan)
+    all_results = [r for sq in plan.sub_questions for r in sq.search_results]
+    sources = build_source_list(all_results)
     findings_text = "\n\n".join(
         f"Sub-question: {sq.text}\nFindings: {sq.findings}"
         for sq in plan.sub_questions

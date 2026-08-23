@@ -1,16 +1,15 @@
-from research_assistant.models import ResearchPlan, Source
+from research_assistant.models import SearchResult, Source
 
 
-def build_source_list(plan: ResearchPlan) -> list[Source]:
-    """Dedupe search results by URL across all sub-questions, in order of
-    first appearance, assigning each a stable citation number."""
+def build_source_list(results: list[SearchResult]) -> list[Source]:
+    """Dedupe search results by URL, in order of first appearance, assigning
+    each a stable citation number."""
     seen: dict[str, Source] = {}
-    for sub_question in plan.sub_questions:
-        for result in sub_question.search_results:
-            if result.url not in seen:
-                seen[result.url] = Source(
-                    id=len(seen) + 1, url=result.url, title=result.title
-                )
+    for result in results:
+        if result.url not in seen:
+            seen[result.url] = Source(
+                id=len(seen) + 1, url=result.url, title=result.title
+            )
     return list(seen.values())
 
 
