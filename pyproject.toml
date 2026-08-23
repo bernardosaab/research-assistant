@@ -24,6 +24,9 @@ notebook = [
     "tokenizers>=0.19",
     "transformers>=4.40",
 ]
+graphrag = [
+    "neo4j>=5",
+]
 
 [project.scripts]
 research-assistant = "research_assistant.cli:app"
