@@ -11,7 +11,7 @@ compare them.
 uv sync --extra dev        # base deps + pytest/pytest-mock/ruff
 uv sync --extra notebook   # only needed for tokenizer_analysis.ipynb
 uv sync --extra graphrag   # only needed to run `--variant graphrag`
-uv sync --extra api        # only needed once the web backend is built
+uv sync --extra api        # only needed to run the web backend (`research-assistant serve`)
 cp .env.example .env       # fill in ANTHROPIC_API_KEY / TAVILY_API_KEY
 ```
 
@@ -67,25 +67,26 @@ Live tests that hit real APIs are marked `live` and excluded by default
     Decided 2026-08-23: also implement on **Google ADK**, same rationale as
     above.
 - `cli.py` — Typer CLI: `research-assistant run <topic> --variant <name>
-  --output <path>`. Will gain a `serve` command once the web backend is
-  built (see below).
-- `web/` (repo root, not yet created) — **speced, not yet implemented.** A
-  FastAPI backend (`src/research_assistant/web/`) wrapping
-  `VARIANT_REGISTRY` behind a submit-and-poll HTTP API, plus a React/Vite
-  frontend to run topics and compare `RunRecorder` traces from a browser —
-  currently the only interface is the CLI, and nothing surfaces trace data
-  anywhere. In-memory only, no persistence beyond the process, binds to
+  --output <path>`. Also has a `serve` command now, which runs the FastAPI
+  web backend locally (binds to `127.0.0.1` only).
+- `web/` — **backend implemented, frontend not yet built.** A FastAPI
+  backend (`src/research_assistant/web/`, with `schemas.py`, `runs.py`,
+  `app.py`) wrapping `VARIANT_REGISTRY` behind a submit-and-poll HTTP API,
+  implemented and tested. The React/Vite frontend to run topics and compare
+  `RunRecorder` traces from a browser is still not built — for now the only
+  interface with a UI is the CLI, and nothing surfaces trace data in a
+  browser yet. In-memory only, no persistence beyond the process, binds to
   `127.0.0.1` only. Design: `docs/superpowers/specs/2026-08-23-web-app-design.md`.
 
 ## Status
 
 Pipeline, agentic, and graphrag variants are implemented with unit test
-coverage and `live` integration tests. The web backend/frontend is speced
-but not built. `tokenizer_analysis.ipynb` is a separate, finished,
-self-contained notebook (domain-specific tokenizer fragmentation) unrelated
-to the CLI app.
+coverage and `live` integration tests. The web backend is now implemented
+and tested; the frontend is still pending. `tokenizer_analysis.ipynb` is a
+separate, finished, self-contained notebook (domain-specific tokenizer
+fragmentation) unrelated to the CLI app.
 
-Roadmap (in rough order): web backend + frontend (spec approved) →
+Roadmap (in rough order): web frontend (backend is done) →
 plan-execute-reflect on Google ADK → multi-agent orchestration on Google
 ADK. Each gets its own brainstorming → spec → plan cycle when picked up;
 the last two are not designed yet beyond this roadmap note.
