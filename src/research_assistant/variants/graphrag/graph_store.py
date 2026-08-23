@@ -1,10 +1,10 @@
-from neo4j import GraphDatabase
-
 from research_assistant.models import Triple
 
 
 class Neo4jGraphStore:
     def __init__(self, uri: str, user: str, password: str) -> None:
+        from neo4j import GraphDatabase
+
         self._driver = GraphDatabase.driver(uri, auth=(user, password))
 
     def clear(self) -> None:

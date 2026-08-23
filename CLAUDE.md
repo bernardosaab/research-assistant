@@ -10,7 +10,7 @@ compare them.
 ```
 uv sync --extra dev        # base deps + pytest/pytest-mock/ruff
 uv sync --extra notebook   # only needed for tokenizer_analysis.ipynb
-uv sync --extra graphrag   # only needed once the graphrag variant is built
+uv sync --extra graphrag   # only needed to run `--variant graphrag`
 uv sync --extra api        # only needed once the web backend is built
 cp .env.example .env       # fill in ANTHROPIC_API_KEY / TAVILY_API_KEY
 ```
@@ -23,7 +23,7 @@ Live tests that hit real APIs are marked `live` and excluded by default
 ## Architecture
 
 - `models.py` — Pydantic domain models: `SearchResult`, `Source`,
-  `SubQuestion`, `ResearchPlan`, `Brief`.
+  `SubQuestion`, `ResearchPlan`, `Brief`, `Triple`.
 - `llm/base.py` — `LLMClient` Protocol + `LLMMessage`/`ToolDef`/`ToolCall`/
   `ToolResult`/`LLMResponse`. Already supports tool-use, in anticipation of
   an agentic variant.
@@ -44,14 +44,14 @@ Live tests that hit real APIs are marked `live` and excluded by default
     then a separate write pass), hand-rolled on the existing
     `LLMClient`/`ToolDef`/`ToolCall` plumbing. Design:
     `docs/superpowers/specs/2026-08-23-agentic-tool-loop-variant-design.md`.
-  - **GraphRAG retrieval variant — speced, not yet implemented.** A
-    different axis than the others: retrieval *strategy* rather than
-    orchestration control-flow. Search results get extracted into a
-    knowledge graph (entities + relationships) in a local Neo4j instance
-    (wiped and rebuilt every run — no cross-run persistence, so
-    `RunRecorder` traces stay comparable to the other variants), queried
-    back as a flat fact list for the write phase. Simplified GraphRAG (no
-    community detection/summarization — see spec for why). Design:
+  - **GraphRAG retrieval variant — implemented.** A different axis than
+    the others: retrieval *strategy* rather than orchestration
+    control-flow. Search results get extracted into a knowledge graph
+    (entities + relationships) in a local Neo4j instance (wiped and
+    rebuilt every run — no cross-run persistence, so `RunRecorder` traces
+    stay comparable to the other variants), queried back as a flat fact
+    list for the write phase. Simplified GraphRAG (no community
+    detection/summarization — see spec for why). Design:
     `docs/superpowers/specs/2026-08-23-graphrag-variant-design.md`.
   - **plan-execute-reflect variant — not started.** Per the original
     4-variant plan: explicit planner produces a structured plan, an executor
@@ -79,14 +79,13 @@ Live tests that hit real APIs are marked `live` and excluded by default
 
 ## Status
 
-Pipeline and agentic variants are implemented with unit test coverage and
-`live` integration tests. GraphRAG and the web backend/frontend are speced
+Pipeline, agentic, and graphrag variants are implemented with unit test
+coverage and `live` integration tests. The web backend/frontend is speced
 but not built. `tokenizer_analysis.ipynb` is a separate, finished,
 self-contained notebook (domain-specific tokenizer fragmentation) unrelated
 to the CLI app.
 
-Roadmap (in rough order): GraphRAG variant (spec approved, plan next) →
-web backend + frontend (spec approved) → plan-execute-reflect on Google ADK
-→ multi-agent orchestration on Google ADK. Each gets its own
-brainstorming → spec → plan cycle when picked up; the last two are not
-designed yet beyond this roadmap note.
+Roadmap (in rough order): web backend + frontend (spec approved) →
+plan-execute-reflect on Google ADK → multi-agent orchestration on Google
+ADK. Each gets its own brainstorming → spec → plan cycle when picked up;
+the last two are not designed yet beyond this roadmap note.

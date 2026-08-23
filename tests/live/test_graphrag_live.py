@@ -24,4 +24,5 @@ def test_graphrag_produces_cited_brief_for_simple_topic():
 
     assert brief.markdown.strip() != ""
     assert "## Sources" in brief.markdown
+    assert "[1]" in brief.markdown
     assert len(brief.sources) > 0

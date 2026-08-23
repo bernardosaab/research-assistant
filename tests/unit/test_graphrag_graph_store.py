@@ -11,10 +11,7 @@ def fake_driver(monkeypatch):
     driver = MagicMock()
     session = MagicMock()
     driver.session.return_value.__enter__.return_value = session
-    monkeypatch.setattr(
-        "research_assistant.variants.graphrag.graph_store.GraphDatabase.driver",
-        lambda uri, auth: driver,
-    )
+    monkeypatch.setattr("neo4j.GraphDatabase.driver", lambda uri, auth: driver)
     return driver, session
 
 
