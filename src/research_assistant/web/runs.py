@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from research_assistant.tracing.recorder import RunRecorder
 from research_assistant.variants import VARIANT_REGISTRY, Variant
@@ -15,7 +15,7 @@ def start_run(topic: str, variant: Variant) -> str:
         status="running",
         topic=topic,
         variant=variant,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     return run_id
 
