@@ -35,3 +35,10 @@ class Brief(BaseModel):
     topic: str
     markdown: str
     sources: list[Source]
+
+
+class Triple(BaseModel):
+    subject: str
+    relation: str
+    object: str
+    source_url: str

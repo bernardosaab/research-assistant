@@ -7,6 +7,7 @@ from research_assistant.models import (
     SearchResult,
     Source,
     SubQuestion,
+    Triple,
 )
 
 
@@ -47,3 +48,16 @@ def test_brief_requires_markdown_and_sources():
 def test_brief_missing_field_raises():
     with pytest.raises(ValidationError):
         Brief(topic="t", sources=[])
+
+
+def test_triple_holds_subject_relation_object_source():
+    triple = Triple(subject="Napoleon", relation="born_in", object="Corsica", source_url="https://a.com")
+    assert triple.subject == "Napoleon"
+    assert triple.relation == "born_in"
+    assert triple.object == "Corsica"
+    assert triple.source_url == "https://a.com"
+
+
+def test_triple_missing_field_raises():
+    with pytest.raises(ValidationError):
+        Triple(subject="Napoleon", relation="born_in", object="Corsica")
