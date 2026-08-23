@@ -78,6 +78,12 @@ def test_run_research_loop_runs_search_then_stops_on_end_turn():
     assert search_tool.queries == ["capital of France"]
     assert len(llm.calls) == 2
 
+    second_call_messages = llm.calls[1]["messages"]
+    assert [m.role for m in second_call_messages] == ["user", "assistant", "user"]
+    assert [tc.id for tc in second_call_messages[1].tool_calls] == ["call-1"]
+    assert [tr.tool_call_id for tr in second_call_messages[2].tool_results] == ["call-1"]
+    assert second_call_messages[2].tool_results[0].content == "results for capital of France"
+
 
 def test_run_research_loop_accumulates_results_across_multiple_rounds():
     llm = ScriptedLLMClient(

@@ -4,7 +4,6 @@ from research_assistant.llm.base import LLMClient, LLMMessage, ToolResult
 from research_assistant.models import Brief, SearchResult
 from research_assistant.tools.search_tool import TavilySearchTool
 from research_assistant.tracing.recorder import RunRecorder
-from research_assistant.variants.pipeline.run import BRIEF_SYSTEM_PROMPT
 from research_assistant.writing.brief import assemble_brief
 from research_assistant.writing.citations import (
     build_source_list,
@@ -18,6 +17,18 @@ RESEARCH_SYSTEM_PROMPT = (
     "Search as many times as needed to build a well-rounded understanding "
     "— covering the topic from multiple angles — then stop calling tools "
     "once you have enough to write a short brief."
+)
+
+BRIEF_SYSTEM_PROMPT = (
+    "You are a research assistant writing a short brief. You will be given a "
+    "topic and a numbered list of sources you gathered while researching it. "
+    "Write a well-organized markdown brief (a few short paragraphs or bullet "
+    "sections, no more than about one page) that synthesizes what you found "
+    "into a coherent answer to the topic. Cite claims using the exact "
+    "bracketed numbers from the source list, e.g. [1] or [2][3], placed "
+    "right after the claim they support. Do not include a 'Sources' section "
+    "yourself — it will be appended separately. Do not invent source "
+    "numbers beyond what was given."
 )
 
 
