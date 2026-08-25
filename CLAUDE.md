@@ -5,6 +5,11 @@ built multiple ways to compare agentic architectures against the same task,
 using `RunRecorder` traces (LLM calls, tokens, duration, search calls) to
 compare them.
 
+`README.md` is the user-facing entry point (setup, running each variant, the
+web app). `docs/ARCHITECTURE.md` is the durable solution-design doc — start
+there for *why* things are built this way; `docs/superpowers/specs/` holds
+the original point-in-time design spec for each subsystem.
+
 ## Setup
 
 ```
