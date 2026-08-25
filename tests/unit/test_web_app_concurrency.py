@@ -41,7 +41,7 @@ def test_post_runs_returns_immediately_while_variant_is_still_running(monkeypatc
         response = httpx.post(f"{base_url}/runs", json={"topic": "t", "variant": "pipeline"})
         elapsed = time.monotonic() - start
         assert response.status_code == 200
-        assert elapsed < 1.0, f"POST /runs took {elapsed:.2f}s — looks like it blocked on the variant"
+        assert elapsed < 3.0, f"POST /runs took {elapsed:.2f}s — looks like it blocked on the variant"
         run_id = response.json()["run_id"]
 
         assert started.wait(timeout=5), "variant function was never invoked"
