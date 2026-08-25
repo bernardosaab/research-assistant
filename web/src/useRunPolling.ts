@@ -14,9 +14,12 @@ export function useRunPolling(runId: string | null) {
     setError(null)
     if (!runId) return
 
+    let cancelled = false
+
     function poll() {
       getRun(runId!)
         .then((result) => {
+          if (cancelled) return
           setRecord(result)
           if (result.status !== 'running' && intervalRef.current) {
             clearInterval(intervalRef.current)
@@ -24,6 +27,7 @@ export function useRunPolling(runId: string | null) {
           }
         })
         .catch(() => {
+          if (cancelled) return
           setError('Lost contact with the backend while polling this run.')
           if (intervalRef.current) {
             clearInterval(intervalRef.current)
@@ -36,6 +40,7 @@ export function useRunPolling(runId: string | null) {
     intervalRef.current = setInterval(poll, POLL_INTERVAL_MS)
 
     return () => {
+      cancelled = true
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
         intervalRef.current = null
