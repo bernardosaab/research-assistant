@@ -37,11 +37,18 @@ def test_post_runs_returns_immediately_while_variant_is_still_running(monkeypatc
         port = server.servers[0].sockets[0].getsockname()[1]
         base_url = f"http://127.0.0.1:{port}"
 
+        # Warm up the connection before timing: the first request to a
+        # freshly-started server pays a one-time connection-setup cost
+        # (TCP handshake, TLS-equivalent socket setup, httpx client init)
+        # that has nothing to do with whether POST /runs blocks on the
+        # variant. Absorb that cost here, outside the timed section below.
+        httpx.get(f"{base_url}/variants")
+
         start = time.monotonic()
         response = httpx.post(f"{base_url}/runs", json={"topic": "t", "variant": "pipeline"})
         elapsed = time.monotonic() - start
         assert response.status_code == 200
-        assert elapsed < 3.0, f"POST /runs took {elapsed:.2f}s — looks like it blocked on the variant"
+        assert elapsed < 1.0, f"POST /runs took {elapsed:.2f}s — looks like it blocked on the variant"
         run_id = response.json()["run_id"]
 
         assert started.wait(timeout=5), "variant function was never invoked"

@@ -20,6 +20,16 @@ machine that resolves to an Anaconda pytest on PATH instead of the venv's).
 Live tests that hit real APIs are marked `live` and excluded by default
 (`addopts = "-m 'not live'"` in pyproject.toml).
 
+To run the web app locally (two processes, no Docker beyond what GraphRAG
+already needs):
+
+```
+uv sync --extra api
+uv run research-assistant serve        # backend on :8000
+
+cd web && npm install && npm run dev   # frontend on :5173, proxies /api -> :8000
+```
+
 ## Architecture
 
 - `models.py` — Pydantic domain models: `SearchResult`, `Source`,
@@ -69,24 +79,25 @@ Live tests that hit real APIs are marked `live` and excluded by default
 - `cli.py` — Typer CLI: `research-assistant run <topic> --variant <name>
   --output <path>`. Also has a `serve` command now, which runs the FastAPI
   web backend locally (binds to `127.0.0.1` only).
-- `web/` — **backend implemented, frontend not yet built.** A FastAPI
-  backend (`src/research_assistant/web/`, with `schemas.py`, `runs.py`,
-  `app.py`) wrapping `VARIANT_REGISTRY` behind a submit-and-poll HTTP API,
-  implemented and tested. The React/Vite frontend to run topics and compare
-  `RunRecorder` traces from a browser is still not built — for now the only
-  interface with a UI is the CLI, and nothing surfaces trace data in a
-  browser yet. In-memory only, no persistence beyond the process, binds to
-  `127.0.0.1` only. Design: `docs/superpowers/specs/2026-08-23-web-app-design.md`.
+- `web/` — **implemented.** A FastAPI backend (`src/research_assistant/web/`,
+  with `schemas.py`, `runs.py`, `app.py`) wrapping `VARIANT_REGISTRY` behind
+  a submit-and-poll HTTP API, plus a React/Vite frontend (`web/`, its own
+  `package.json`) to submit a topic, watch a run complete, read the
+  resulting `Brief`, and compare `RunRecorder` traces across runs from a
+  browser — the frontend talks to the backend only through a Vite dev-server
+  proxy (`/api/* -> 127.0.0.1:8000`), never cross-origin. In-memory only, no
+  persistence beyond the process, binds to `127.0.0.1` only. Design:
+  `docs/superpowers/specs/2026-08-23-web-app-design.md`.
 
 ## Status
 
 Pipeline, agentic, and graphrag variants are implemented with unit test
-coverage and `live` integration tests. The web backend is now implemented
-and tested; the frontend is still pending. `tokenizer_analysis.ipynb` is a
-separate, finished, self-contained notebook (domain-specific tokenizer
-fragmentation) unrelated to the CLI app.
+coverage and `live` integration tests. The web app — FastAPI backend and
+React/Vite frontend — is now implemented and tested end to end.
+`tokenizer_analysis.ipynb` is a separate, finished, self-contained notebook
+(domain-specific tokenizer fragmentation) unrelated to the CLI app.
 
-Roadmap (in rough order): web frontend (backend is done) →
-plan-execute-reflect on Google ADK → multi-agent orchestration on Google
-ADK. Each gets its own brainstorming → spec → plan cycle when picked up;
-the last two are not designed yet beyond this roadmap note.
+Roadmap (in rough order): plan-execute-reflect on Google ADK →
+multi-agent orchestration on Google ADK. Each gets its own
+brainstorming → spec → plan cycle when picked up; neither is designed yet
+beyond this roadmap note.
