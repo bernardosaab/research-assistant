@@ -34,8 +34,8 @@ run today but nothing surfaces it anywhere, CLI included.
 ### File layout
 
 - `src/research_assistant/web/__init__.py`
-- `src/research_assistant/web/app.py` — the FastAPI app, three routes,
-  CORS middleware
+- `src/research_assistant/web/app.py` — the FastAPI app, three routes (no
+  CORS middleware — see "Frontend↔backend connection" below for why)
 - `src/research_assistant/web/runs.py` — in-memory run store + the
   background execution function
 - `src/research_assistant/web/schemas.py` — `RunRecord`, `RunRequest`
@@ -45,12 +45,49 @@ run today but nothing surfaces it anywhere, CLI included.
 - `pyproject.toml` — new `api` extra: `fastapi`, `uvicorn`
 - `web/` (repo root, sibling to `src/`) — the React/Vite frontend, its own
   `package.json`:
+  - `web/vite.config.ts` — dev-server proxy config (see below)
   - `web/src/App.tsx` — routes the three views
   - `web/src/RunForm.tsx` — topic input + variant picker
-  - `web/src/useRunPolling.ts` — polls `GET /runs/{id}` until done/error
+  - `web/src/useRunPolling.ts` — polls `GET /api/runs/{id}` until done/error
   - `web/src/BriefView.tsx` — renders the markdown brief + sources
   - `web/src/TraceCompare.tsx` — chart comparing traces across this
     session's completed runs
+
+### Frontend↔backend connection — resolved 2026-08-25
+
+Earlier drafts of this spec were self-contradictory: they mandated CORS
+restricted to `http://localhost:5173` *and* described a Vite dev-server
+proxy from `/api` to the backend — mutually exclusive (a proxy makes every
+request same-origin, making CORS irrelevant; the proxy as described would
+also have 404'd, since backend routes are mounted at root, e.g. `/variants`,
+not under `/api/variants`).
+
+**Decision: Vite dev-server proxy.** The frontend calls relative paths like
+`/api/variants` and `/api/runs`; Vite's dev server rewrites and forwards
+`/api/*` to `http://127.0.0.1:8000/*` (stripping the `/api` prefix). The
+browser only ever talks to `:5173` — no cross-origin request ever happens.
+Consequently, **the backend's `CORSMiddleware` is dead code and gets
+removed** from the already-merged `app.py` as part of implementing this
+(the backend shipped with it before this decision was made, since at the
+time either resolution was still open).
+
+```typescript
+// web/vite.config.ts
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8000',
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
+  },
+})
+```
 
 ### Variant discovery — no hardcoded "coming soon" list
 
@@ -163,20 +200,12 @@ no way to know something went wrong.
 
 ```python
 from fastapi import BackgroundTasks, FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 
 from research_assistant.variants import VARIANT_REGISTRY
 from research_assistant.web.runs import execute_run, get_run, list_runs, start_run
 from research_assistant.web.schemas import RunRecord, RunRequest
 
 app = FastAPI(title="research-assistant")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Vite dev server only
-    allow_methods=["GET", "POST"],
-    allow_headers=["*"],
-)
 
 
 @app.get("/variants")
@@ -223,16 +252,18 @@ Binding to `127.0.0.1` rather than `0.0.0.0` is deliberate: this proxies
 your Anthropic/Tavily API keys' usage to whatever hits it, and there's no
 reason to expose that to the local network for a personal dev tool.
 
-**5. Frontend flow:** `RunForm` submits `POST /runs`, gets a `run_id`,
-hands it to `useRunPolling` which calls `GET /runs/{run_id}` every ~2s
+**5. Frontend flow:** `RunForm` submits `POST /api/runs`, gets a `run_id`,
+hands it to `useRunPolling` which calls `GET /api/runs/{run_id}` every ~2s
 until `status !== "running"`. On `"done"`, `BriefView` renders
 `record.brief.markdown` + sources. On `"error"`, the form surfaces
 `record.error` directly (it's already a plain string message, not a stack
 trace, thanks to the variants' own error handling — e.g. GraphRAG's
 `RuntimeError` about missing `.env` config). `TraceCompare` calls
-`GET /runs` and charts `trace.llm_calls` / `search_calls` / `input_tokens`
+`GET /api/runs` and charts `trace.llm_calls` / `search_calls` / `input_tokens`
 + `output_tokens` / `duration_seconds` across whichever runs in the list
-have `status === "done"`, grouped by `variant`.
+have `status === "done"`, grouped by `variant`. All frontend fetches use
+the `/api/...`-prefixed relative path — Vite's proxy (above) handles the
+rest; the frontend code never hardcodes `http://127.0.0.1:8000` anywhere.
 
 ### Local dev
 
@@ -240,7 +271,7 @@ Two processes, no new Docker orchestration (Compose stays scoped to Neo4j,
 per the GraphRAG spec):
 
 ```
-uv sync --extra api
+uv sync --extra dev --extra api
 uv run research-assistant serve        # backend on :8000
 
 cd web && npm install && npm run dev   # frontend on :5173, proxies /api -> :8000
